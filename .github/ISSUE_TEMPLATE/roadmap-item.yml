@@ -2,15 +2,15 @@ name: Roadmap Item
 description: Report a feature request / major task / Minor work item
 title: "[TYPE] "
 labels: []
-type:
+team:
   - type: dropdown
     id: type
     attributes:
       label: Type
       options:
-        - Feature
-        - Major Task
-        - Minor Work
+        - Team A
+        - Team B
+        - C Team
     validations:
       required: true
 body:
