@@ -1,0 +1,6 @@
+{
+  "name": "Map Issue Fields to Project",
+  "description": "On issue creation, maps form field values to the roadmap project. Requires ORG_PROJECT_TOKEN secret and ROADMAP_PROJECT_NUMBER, ORG_NAME org variables.",
+  "iconName": "octicon-project",
+  "categories": ["Project Management"]
+}

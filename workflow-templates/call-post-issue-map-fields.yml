@@ -1,0 +1,11 @@
+name: Map Issue Fields to Project
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  map-fields:
+    uses: nova-experiments/.github/.github/workflows/post-issue-map-fields.yml@main
+    secrets:
+      token: ${{ secrets.ORG_PROJECT_TOKEN }}

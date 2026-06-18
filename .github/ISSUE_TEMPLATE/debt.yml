@@ -1,0 +1,50 @@
+name: Debt
+description: Technical debt or architecture cleanup. Uses the chore/ branch type.
+title: "[Debt] "
+labels: ["debt"]
+type: Debt
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Before submitting:** debt must link to a parent **Other Work** issue in the `roadmap` repo.
+        > Use a `chore/` branch for the PR that resolves this.
+
+  - type: input
+    id: parent-issue
+    attributes:
+      label: Parent Other Work Issue Number
+      description: Issue number of the parent Other Work issue in the roadmap repo.
+      placeholder: "123"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is the debt?
+      description: Describe what is messy, fragile, or wrong — and why it matters now.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: How does this debt affect development speed, reliability, or correctness?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-approach
+    attributes:
+      label: Proposed Approach
+      description: How should this be cleaned up?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Links, related issues, or prior attempts.

@@ -1,0 +1,6 @@
+{
+  "name": "PR Parent Issue Check",
+  "description": "On PR open or update, warns if the PR has no linked issue, no roadmap parent, or a parent in the Parking Lot. Requires ORG_PROJECT_TOKEN secret and ROADMAP_REPO, ROADMAP_PROJECT_NUMBER, PARKING_LOT_PROJECT_NUMBER, ORG_NAME org variables.",
+  "iconName": "octicon-git-pull-request",
+  "categories": ["Project Management"]
+}

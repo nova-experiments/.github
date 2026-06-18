@@ -1,0 +1,79 @@
+name: Bug Report
+description: Report a bug in the product. Must link to a parent issue in the roadmap repo.
+title: "[Bug] "
+labels: ["bug"]
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Before submitting:** every bug must trace back to a parent issue in the `roadmap` repo.
+        > - Feature track bug → parent is a **Feature** issue
+        > - Other Work track bug → parent is an **Other Work** issue
+
+  - type: input
+    id: parent-issue
+    attributes:
+      label: Parent Issue Number
+      description: Issue number of the parent issue in the roadmap repo.
+      placeholder: "123"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: track
+    attributes:
+      label: Track
+      description: Which work track does this bug belong to?
+      options:
+        - "Feature — bug found while delivering a feature"
+        - "Other Work — unplanned product bug"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear, concise description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Click '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: Include error messages or screenshots if available.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, app version, or other relevant context.
+      placeholder: "e.g. macOS 15, Chrome 125, Nova v2.3.1"
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Logs, screenshots, related issues, or anything else useful.

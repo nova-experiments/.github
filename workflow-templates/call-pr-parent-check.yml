@@ -1,0 +1,11 @@
+name: PR Parent Issue Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-parent:
+    uses: nova-experiments/.github/.github/workflows/pr-parent-check.yml@main
+    secrets:
+      token: ${{ secrets.ORG_PROJECT_TOKEN }}

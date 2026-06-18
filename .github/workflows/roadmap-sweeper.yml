@@ -1,0 +1,120 @@
+name: Roadmap Sweeper
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 6 AM UTC
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          ORG: nova-experiments
+          ROADMAP_PROJECT_NUMBER: ${{ vars.ROADMAP_PROJECT_NUMBER }}
+          PARKING_LOT_PROJECT_NUMBER: ${{ vars.PARKING_LOT_PROJECT_NUMBER }}
+        with:
+          github-token: ${{ secrets.ORG_PROJECT_TOKEN }}
+          script: |
+            const org = process.env.ORG;
+            const roadmapRepo = 'Roadmap';
+            const roadmapProjectNumber = parseInt(process.env.ROADMAP_PROJECT_NUMBER);
+            const parkingLotProjectNumber = parseInt(process.env.PARKING_LOT_PROJECT_NUMBER);
+
+            // Issue types that must live in the roadmap repo
+            const ROADMAP_TYPES = new Set([
+              'Feature Set', 'Feature', 'Design', 'Major Task', 'Other Work'
+            ]);
+
+            // Fetch project IDs and their member issue node IDs
+            async function getProjectInfo(projectNumber) {
+              const data = await github.graphql(`
+                query($org: String!, $number: Int!) {
+                  organization(login: $org) {
+                    projectV2(number: $number) {
+                      id
+                      items(first: 100) {
+                        nodes {
+                          content {
+                            ... on Issue { id number repository { nameWithOwner } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `, { org, number: projectNumber });
+              return data.organization.projectV2;
+            }
+
+            const [roadmapProject, parkingLotProject] = await Promise.all([
+              getProjectInfo(roadmapProjectNumber),
+              getProjectInfo(parkingLotProjectNumber),
+            ]);
+
+            const inRoadmapProject = new Set(
+              roadmapProject.items.nodes
+                .map(n => n.content?.id)
+                .filter(Boolean)
+            );
+
+            // Search for roadmap-type issues created outside the roadmap repo
+            // Uses label-based search since type: qualifier is repo-scoped in search
+            const roadmapLabels = ['feature-set', 'feature', 'design', 'major-task', 'other-work'];
+            const labelQuery = roadmapLabels.map(l => `label:${l}`).join(' ');
+            const searchQuery = `org:${org} is:issue is:open ${labelQuery} -repo:${org}/${roadmapRepo}`;
+
+            const { items: misplacedIssues } = await github.rest.search.issuesAndPullRequests({
+              q: searchQuery,
+              per_page: 100,
+            });
+
+            for (const issue of misplacedIssues.data.items) {
+              const [owner, repo] = issue.repository_url.split('/repos/')[1].split('/');
+              console.log(`Transferring ${owner}/${repo}#${issue.number} to ${roadmapRepo}`);
+
+              // Transfer to roadmap repo
+              await github.rest.issues.transfer({
+                owner,
+                repo,
+                issue_number: issue.number,
+                new_owner: org,
+                new_repo: roadmapRepo,
+              });
+            }
+
+            // Find roadmap-level issues in the roadmap repo with no project membership
+            const { data: roadmapIssues } = await github.rest.issues.listForRepo({
+              owner: org,
+              repo: roadmapRepo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const roadmapTypeIssues = roadmapIssues.filter(issue =>
+              issue.type && ROADMAP_TYPES.has(issue.type.name)
+            );
+
+            for (const issue of roadmapTypeIssues) {
+              if (!inRoadmapProject.has(issue.node_id)) {
+                console.log(`Adding ${roadmapRepo}#${issue.number} to Parking Lot`);
+                await github.graphql(`
+                  mutation($projectId: ID!, $contentId: ID!) {
+                    addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                      item { id }
+                    }
+                  }
+                `, {
+                  projectId: parkingLotProject.id,
+                  contentId: issue.node_id,
+                });
+
+                await github.rest.issues.createComment({
+                  owner: org,
+                  repo: roadmapRepo,
+                  issue_number: issue.number,
+                  body: '> **Parking Lot** — This issue is not assigned to any project. It has been added to the Parking Lot. Assign it to a project or milestone when it is ready to be scheduled.',
+                });
+              }
+            }
