@@ -65,12 +65,12 @@ jobs:
             const labelQuery = roadmapLabels.map(l => `label:${l}`).join(' ');
             const searchQuery = `org:${org} is:issue is:open ${labelQuery} -repo:${org}/${roadmapRepo}`;
 
-            const { items: misplacedIssues } = await github.rest.search.issuesAndPullRequests({
+            const { data: { items: misplacedIssues } } = await github.rest.search.issuesAndPullRequests({
               q: searchQuery,
               per_page: 100,
             });
 
-            for (const issue of misplacedIssues.data.items) {
+            for (const issue of misplacedIssues) {
               const [owner, repo] = issue.repository_url.split('/repos/')[1].split('/');
               console.log(`Transferring ${owner}/${repo}#${issue.number} to ${roadmapRepo}`);
 
