@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        > **Before submitting:** a story must link to a parent **Feature** issue in the `roadmap` repo.
+        > A story must link to a parent **Feature** issue in the `roadmap` repo.
         > A story that cannot be completed within a week should be split.
 
   - type: input

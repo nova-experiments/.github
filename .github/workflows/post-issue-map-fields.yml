@@ -30,14 +30,7 @@ jobs:
               return match ? match[1].trim() : null;
             }
 
-            const parentIssue = parseField('Parent Issue');
-            const rawTrack    = parseField('Track');
-            const rawTeam     = parseField('Assigned Team') || parseField('Affected Team');
-
-            // Strip the description after the em dash in dropdown values
-            // e.g. "Feature — bug found while delivering a feature" → "Feature"
-            const track = rawTrack?.split('—')[0].trim() ?? null;
-            const team  = rawTeam?.trim() ?? null;
+            const team = parseField('Assigned Team')?.trim() ?? null;
 
             // Issue type is set by the template's `type:` frontmatter field
             const issueType = context.payload.issue.type?.name ?? null;
@@ -90,57 +83,7 @@ jobs:
               `, { p: projectId, i: itemId, f: field.id, o: option.id });
             }
 
-            async function setText(fieldName, value) {
-              const field = getField(fieldName);
-              if (!field || !value) return;
-              await github.graphql(`
-                mutation($p: ID!, $i: ID!, $f: ID!, $t: String!) {
-                  updateProjectV2ItemFieldValue(input: {
-                    projectId: $p, itemId: $i, fieldId: $f,
-                    value: { text: $t }
-                  }) { projectV2Item { id } }
-                }
-              `, { p: projectId, i: itemId, f: field.id, t: value });
-            }
-
-            // Resolve parent issue reference to a node ID.
-            // Handles: full URL, owner/repo#number, or bare number (assumed roadmap repo).
-            async function resolveParentNodeId(ref) {
-              if (!ref) return null;
-              let owner, repo, number;
-
-              const urlMatch = ref.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/);
-              const crossMatch = ref.match(/^([^/]+)\/([^#]+)#(\d+)$/);
-              const bareMatch = ref.match(/^(\d+)$/);
-
-              if (urlMatch)        [, owner, repo, number] = urlMatch;
-              else if (crossMatch) [, owner, repo, number] = crossMatch;
-              else if (bareMatch)  { owner = 'nova-experiments'; repo = 'Roadmap'; number = bareMatch[1]; }
-              else return null;
-
-              const { repository: { issue } } = await github.graphql(`
-                query($owner: String!, $repo: String!, $number: Int!) {
-                  repository(owner: $owner, name: $repo) {
-                    issue(number: $number) { id }
-                  }
-                }
-              `, { owner, repo, number: parseInt(number) });
-              return issue?.id ?? null;
-            }
-
-            const parentNodeId = await resolveParentNodeId(parentIssue);
-
             await Promise.all([
-              setSingleSelect('Track', track),
-              // Feature Sets span multiple teams — team attribution lives on child Features
-              issueType !== 'Feature Set' && setSingleSelect('Team', team),
+              setSingleSelect('Team', team),
               setSingleSelect('Type', issueType),
-              setText('Parent Issue', parentIssue),
-              parentNodeId && github.graphql(`
-                mutation($parentId: ID!, $childId: ID!) {
-                  addSubIssue(input: { issueId: $parentId, subIssueId: $childId }) {
-                    issue { id }
-                  }
-                }
-              `, { parentId: parentNodeId, childId: issueNodeId }),
             ]);

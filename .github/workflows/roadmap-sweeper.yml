@@ -34,7 +34,7 @@ jobs:
                   organization(login: $org) {
                     projectV2(number: $number) {
                       id
-                      items(first: 100) {
+                      items(first: 100) {  # max per page — pagination needed if project exceeds 100 items
                         nodes {
                           content {
                             ... on Issue { id number repository { nameWithOwner } }
@@ -59,16 +59,29 @@ jobs:
                 .filter(Boolean)
             );
 
-            // Search for roadmap-type issues created outside the roadmap repo
-            // Uses label-based search since type: qualifier is repo-scoped in search
-            const roadmapLabels = ['feature-set', 'feature', 'design', 'major-task', 'other-work'];
-            const labelQuery = roadmapLabels.map(l => `label:${l}`).join(' ');
-            const searchQuery = `org:${org} is:issue is:open ${labelQuery} -repo:${org}/${roadmapRepo}`;
+            const inParkingLot = new Set(
+              parkingLotProject.items.nodes
+                .map(n => n.content?.id)
+                .filter(Boolean)
+            );
 
-            const { data: { items: misplacedIssues } } = await github.rest.search.issuesAndPullRequests({
-              q: searchQuery,
-              per_page: 100,
-            });
+            // Search per label — multiple label: qualifiers are AND in GitHub search,
+            // so one query per label is required to get OR semantics.
+            const roadmapLabels = ['feature-set', 'feature', 'design', 'major-task', 'other-work'];
+            const seenIds = new Set();
+            const misplacedIssues = [];
+            for (const label of roadmapLabels) {
+              const { data: { items } } = await github.rest.search.issuesAndPullRequests({
+                q: `org:${org} is:issue is:open label:${label} -repo:${org}/${roadmapRepo}`,
+                per_page: 100,
+              });
+              for (const issue of items) {
+                if (!seenIds.has(issue.id)) {
+                  seenIds.add(issue.id);
+                  misplacedIssues.push(issue);
+                }
+              }
+            }
 
             for (const issue of misplacedIssues) {
               const [owner, repo] = issue.repository_url.split('/repos/')[1].split('/');
@@ -98,6 +111,7 @@ jobs:
 
             for (const issue of roadmapTypeIssues) {
               if (!inRoadmapProject.has(issue.node_id)) {
+                const alreadyParked = inParkingLot.has(issue.node_id);
                 console.log(`Adding ${roadmapRepo}#${issue.number} to Parking Lot`);
                 await github.graphql(`
                   mutation($projectId: ID!, $contentId: ID!) {
@@ -110,11 +124,13 @@ jobs:
                   contentId: issue.node_id,
                 });
 
-                await github.rest.issues.createComment({
-                  owner: org,
-                  repo: roadmapRepo,
-                  issue_number: issue.number,
-                  body: '> **Parking Lot** — This issue is not assigned to any project. It has been added to the Parking Lot. Assign it to a project or milestone when it is ready to be scheduled.',
-                });
+                if (!alreadyParked) {
+                  await github.rest.issues.createComment({
+                    owner: org,
+                    repo: roadmapRepo,
+                    issue_number: issue.number,
+                    body: '> **Parking Lot** — This issue is not assigned to any project. It has been added to the Parking Lot. Assign it to a project or milestone when it is ready to be scheduled.',
+                  });
+                }
               }
             }

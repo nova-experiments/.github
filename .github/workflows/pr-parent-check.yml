@@ -40,7 +40,7 @@ jobs:
             const warnings = [];
 
             if (linkedRefs.length === 0) {
-              warnings.push('This PR has no linked issues. All PRs must reference a parent issue in the roadmap repo.');
+              warnings.push('This PR has no linked issues. All PRs must reference an issue that traces back to a parent in the roadmap repo.');
             }
 
             // Fetch project membership for roadmap and parking lot
@@ -49,7 +49,7 @@ jobs:
                 query($org: String!, $number: Int!) {
                   organization(login: $org) {
                     projectV2(number: $number) {
-                      items(first: 100) {
+                      items(first: 100) {  # max per page — pagination needed if project exceeds 100 items
                         nodes {
                           content { ... on Issue { id } }
                         }
@@ -77,40 +77,50 @@ jobs:
                 issue_number: ref.number,
               });
 
-              // Parse the parent issue URL from the issue body
-              const parentMatch = (issue.body || '').match(
-                /###\s+Parent Issue\s*\n+\s*(https:\/\/github\.com\/[^\s]+\/issues\/\d+)/i
-              );
+              // Fetch the parent via GitHub's native sub-issues relationship
+              const { node } = await github.graphql(`
+                query($id: ID!) {
+                  node(id: $id) {
+                    ... on Issue {
+                      parent {
+                        id
+                        number
+                        url
+                        repository { name owner { login } }
+                      }
+                    }
+                  }
+                }
+              `, { id: issue.node_id });
 
-              if (!parentMatch) {
+              const parent = node?.parent;
+
+              if (!parent) {
                 warnings.push(
-                  `[${ref.owner}/${ref.repo}#${ref.number}](${issue.html_url}) has no parent issue linked. ` +
+                  `[${ref.owner}/${ref.repo}#${ref.number}](${issue.html_url}) has no parent issue set. ` +
                   `Every issue must trace back to a parent in the \`${roadmapRepo}\` repo.`
                 );
                 continue;
               }
 
-              const parentUrl = parentMatch[1];
-              const parentParts = parentUrl.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/);
-              if (!parentParts) continue;
-
-              const [, parentOwner, parentRepo, parentNumberStr] = parentParts;
-              const { data: parentIssue } = await github.rest.issues.get({
-                owner: parentOwner,
-                repo: parentRepo,
-                issue_number: parseInt(parentNumberStr),
-              });
-
-              if (inParkingLot.has(parentIssue.node_id)) {
+              if (parent.repository.name !== roadmapRepo || parent.repository.owner.login !== org) {
                 warnings.push(
                   `[${ref.owner}/${ref.repo}#${ref.number}](${issue.html_url})'s parent ` +
-                  `[${parentRepo}#${parentNumberStr}](${parentUrl}) is in the **Parking Lot** — ` +
+                  `[${parent.repository.name}#${parent.number}](${parent.url}) is not in the \`${roadmapRepo}\` repo.`
+                );
+                continue;
+              }
+
+              if (inParkingLot.has(parent.id)) {
+                warnings.push(
+                  `[${ref.owner}/${ref.repo}#${ref.number}](${issue.html_url})'s parent ` +
+                  `[${roadmapRepo}#${parent.number}](${parent.url}) is in the **Parking Lot** — ` +
                   `it has not been scheduled. Confirm this work is intentional before merging.`
                 );
-              } else if (!inRoadmapProject.has(parentIssue.node_id)) {
+              } else if (!inRoadmapProject.has(parent.id)) {
                 warnings.push(
                   `[${ref.owner}/${ref.repo}#${ref.number}](${issue.html_url})'s parent ` +
-                  `[${parentRepo}#${parentNumberStr}](${parentUrl}) is not assigned to any project. ` +
+                  `[${roadmapRepo}#${parent.number}](${parent.url}) is not assigned to any project. ` +
                   `Add it to a project before merging.`
                 );
               }
@@ -118,7 +128,7 @@ jobs:
 
             if (warnings.length === 0) return;
 
-            // Check if a warning comment already exists so we don't spam on every push
+            // Update existing bot comment rather than adding a new one on every push
             const { data: comments } = await github.rest.issues.listComments({
               owner: org,
               repo,

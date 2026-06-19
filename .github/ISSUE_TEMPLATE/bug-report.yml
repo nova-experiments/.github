@@ -7,29 +7,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        > **Before submitting:** every bug must trace back to a parent issue in the `roadmap` repo.
-        > - Feature track bug → parent is a **Feature** issue
-        > - Other Work track bug → parent is an **Other Work** issue
-
-  - type: input
-    id: parent-issue
-    attributes:
-      label: Parent Issue Number
-      description: Issue number of the parent issue in the roadmap repo.
-      placeholder: "123"
-    validations:
-      required: true
-
-  - type: dropdown
-    id: track
-    attributes:
-      label: Track
-      description: Which work track does this bug belong to?
-      options:
-        - "Feature — bug found while delivering a feature"
-        - "Other Work — unplanned product bug"
-    validations:
-      required: true
+        > Every bug must trace back to a parent issue in the `roadmap` repo.
+        > Feature track bug → parent is a **Feature** issue
+        > Other Work track bug → parent is an **Other Work** issue
+        > This will be enforced during PR checks, so please ensure the parent issue is linked correctly.
 
   - type: textarea
     id: description
@@ -54,16 +35,12 @@ body:
     id: expected
     attributes:
       label: Expected Behavior
-    validations:
-      required: true
 
   - type: textarea
     id: actual
     attributes:
       label: Actual Behavior
       description: Include error messages or screenshots if available.
-    validations:
-      required: true
 
   - type: input
     id: environment

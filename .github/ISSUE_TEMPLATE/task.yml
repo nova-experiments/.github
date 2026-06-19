@@ -7,45 +7,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        > **Before submitting:** a task must link to a parent issue in the `roadmap` repo.
+        > A task must link to a parent issue in the `roadmap` repo.
         > A PR that touches more than one story is a signal the PR should be split or the stories merged.
-
-  - type: input
-    id: parent-issue
-    attributes:
-      label: Parent Issue Number
-      description: Issue number of the parent Story, Feature, or Major Task in the roadmap repo.
-      placeholder: "123"
-    validations:
-      required: true
-
-  - type: dropdown
-    id: track
-    attributes:
-      label: Track
-      description: Which work track does this task belong to?
-      options:
-        - "Feature — implementation work for a feature or story"
-        - "Major Task — work tied to a non-feature obligation (cert, migration, audit, etc.)"
-    validations:
-      required: true
 
   - type: textarea
     id: summary
     attributes:
       label: Summary
       description: What needs to be done and why?
-    validations:
-      required: true
-
-  - type: textarea
-    id: done
-    attributes:
-      label: Definition of Done
-      description: How do we know this task is complete?
-      placeholder: |
-        - [ ] ...
-        - [ ] ...
     validations:
       required: true
 

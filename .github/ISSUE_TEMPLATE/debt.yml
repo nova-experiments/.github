@@ -7,17 +7,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        > **Before submitting:** debt must link to a parent **Other Work** issue in the `roadmap` repo.
+        > Debt must link to a parent **Other Work** issue in the `roadmap` repo. 
+        > Will be enforced during PR checks, so please ensure the parent issue is linked correctly.
         > Use a `chore/` branch for the PR that resolves this.
-
-  - type: input
-    id: parent-issue
-    attributes:
-      label: Parent Other Work Issue Number
-      description: Issue number of the parent Other Work issue in the roadmap repo.
-      placeholder: "123"
-    validations:
-      required: true
 
   - type: textarea
     id: problem
